@@ -10,21 +10,20 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: root
     ports:
-      - "3307:3306"
+      - "3307:3306"   # localhost:3307 → container:3306
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   spring-app:
     image: rouaroua/eventsproject:latest
     container_name: spring-app
     depends_on:
-      mysql:
-        condition: service_healthy
+      - mysql
     ports:
       - "8089:8089"
     environment:
@@ -34,6 +33,14 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8089
       SERVER_SERVLET_CONTEXT_PATH: /events
+    command: >
+      sh -c "
+      until mysqladmin ping -hmysql --silent; do
+        echo 'Waiting for MySQL...';
+        sleep 5;
+      done;
+      java -jar app.jar
+      "
 
 volumes:
   mysql_data:
